@@ -1,5 +1,7 @@
 {
 "defaultSocksHost" : "127.0.0.1",
 "socksProxies" : [1080, 1081],
-"checkInterval" : 60
+"checkInterval" : 60,
+"socketTimeout" : 10,
+"tunnelServers" : {"443" : [["www.google.com", 443], ["74.125.193.99", 443]]}
 }
