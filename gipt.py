@@ -69,12 +69,15 @@ class Pipe(Thread):
         self.sockOut = sockOut
 
     def pipeData(self):
+        i = 0
         try:
             while True:
                 data = self.sockIn.recv(65536)
-                if data == '':
+                if data == '' or data == None:
                     break
                 self.sockOut.send(data)
+                i += 1
+                print(i)
         finally:
             self.sockIn.close()
             self.sockOut.close()
