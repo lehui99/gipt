@@ -19,6 +19,9 @@ class ProxySocket(object):
         self.failCount = 0
         self.fail = False
 
+    def __cmp__(self, another):
+        return self.failCount - another.failCount
+
     def apply(self, socksocket):
         socksocket.set_proxy(socks.SOCKS5, self.host, self.port)
         socksocket.settimeout(self.config['socketTimeout'])
@@ -53,8 +56,8 @@ class ProxySelector(object):
 
     def __call__(self):
         goodProxies = [socksProxy for socksProxy in self.config['socksProxies'] if not socksProxy.fail]
-        goodProxies.sort(cmp = lambda x, y: x.failCount - y.failCount)
-        return goodProxies[random.randint(0, len(goodProxies)) * random.randint(0, len(goodProxies)) / len(goodProxies) - 1]
+        goodProxies.sort()
+        return goodProxies[int(random.randint(0, len(goodProxies)) * random.randint(0, len(goodProxies)) / len(goodProxies)) - 1]
 
 class Pipe(Thread):
 
@@ -67,7 +70,7 @@ class Pipe(Thread):
 
     def pipeData(self):
         while True:
-            sockOut.send(sockIn.recv(65536))
+            self.sockOut.send(self.sockIn.recv(65536))
 
     def run(self):
         self.pipeData()
@@ -101,12 +104,12 @@ class Server(Thread):
         self.proxySelector = proxySelector
         self.sock = socket.socket()
         self.sock.bind(('0.0.0.0', port))
-        self.sock.listen()
+        self.sock.listen(50)
 
     def run(self):
         #tunnels = []
         while True:
-            clientSock = self.sock.accept()
+            clientSock, clientAddr = self.sock.accept()
             tunnel = Tunnel(self.config, clientSock, self.hosts, self.proxySelector)
             tunnel.start()
             #tunnels.append(pipe)
