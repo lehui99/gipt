@@ -120,8 +120,8 @@ class Main(object):
     def start(self):
         CheckProxies(self.config).start()
         #servers = []
-        proxySelector = ProxySelector()
-        for k, v in self.config['tunnelServers'].iteritems():
+        proxySelector = ProxySelector(self.config)
+        for k, v in self.config['tunnelServers'].items():
             server = Server(self.config, int(k), v, proxySelector)
             server.start()
             #servers.append(tunnel)
