@@ -71,8 +71,11 @@ class Pipe(Thread):
     def pipeData(self):
         try:
             while True:
-                self.sockOut.send(self.sockIn.recv(65536))
-        except Exception:
+                data = self.sockIn.recv(65536)
+                if data == '':
+                    break
+                self.sockOut.send(data)
+        finally:
             self.sockIn.close()
             self.sockOut.close()
 
