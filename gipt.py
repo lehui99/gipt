@@ -24,7 +24,6 @@ class ProxySocket(object):
 
     def apply(self, socksocket):
         socksocket.set_proxy(socks.SOCKS5, self.host, self.port)
-        socksocket.settimeout(self.config['socketTimeout'])
 
 class CheckProxies(Thread):
 
@@ -38,6 +37,7 @@ class CheckProxies(Thread):
             for socksProxy in self.config['socksProxies']:
                 s = socks.socksocket()
                 socksProxy.apply(s)
+                s.settimeout(self.config['socketTimeout'])
                 try:
                     s.connect(('www.google.com', 80))
                     s.send(bytearray(b'GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n'))
@@ -69,8 +69,12 @@ class Pipe(Thread):
         self.sockOut = sockOut
 
     def pipeData(self):
-        while True:
-            self.sockOut.send(self.sockIn.recv(65536))
+        try:
+            while True:
+                self.sockOut.send(self.sockIn.recv(65536))
+        except Exception:
+            self.sockIn.close()
+            self.sockOut.close()
 
     def run(self):
         self.pipeData()
