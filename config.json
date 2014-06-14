@@ -1,0 +1,5 @@
+{
+"defaultSocksHost" : "127.0.0.1",
+"socksProxies" : [1080, 1081],
+"checkInterval" : 60
+}
