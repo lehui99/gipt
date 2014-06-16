@@ -11,6 +11,7 @@ Google IP的国内反向代理
 3. 问：为何只提供https访问访问？你能看到我搜索的内容吗？<br />答：由于SSL的特性，使用https时不管是我还是阿里云还是GFW都无法看到你的搜索内容，也是不提供http访问的原因。
 4. 问：为何放在阿里云上？不怕被喝茶吗？<br />答：我们的祖国并不承认封锁了Google，说是Google自己的问题。所以我只是帮Google一下，让大家有个顺畅访问Google的方法，有什么不对呢？
 5. 问：原理是什么？<br />答：我在阿里云上开了shadowsocks服务，通过shadowsocks服务器做简单的端口转发连接Google服务。特此感谢 https://www.shadowsocks.net/ 提供的免费帐号。
+6. 问：有时候访问不了或跳到`google.de`怎么办？<br />答：先访问 https://www.google.com/ncr ，之后再次访问 https://www.google.com/ 即可。案a
 
 -
 
