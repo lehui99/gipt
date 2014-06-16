@@ -27,6 +27,7 @@ Google IP的国内反向代理
 ----
 
 1. 运行本项目需要python环境，如果是Windows系统请确保安装了python并且保证python在PATH环境变量中。
-2. 项目依赖 https://github.com/Anorov/PySocks ，需要先安装PySocks才能运行（其实不安装也行，直接把socks.py放到和gipt.py同一个目录下即可）。
+2. 项目依赖 https://github.com/Anorov/PySocks ，需要先安装PySocks才能运行（其实不安装也行，直接把PySocks的socks.py放到和gipt.py同一个目录下即可）。
 3. 首先需要准备一至多个shadowsocks帐号，将shadowsocks帐号的配置文件分别保存成ss1config.json、ss2config.json……，和gipt.py放在同一个目录下。
-4. TODO:
+4. 将shadowsocks客户端放在thirdparty目录中，修改ss.bat（如果你是Windows系统）或ss.sh（如果你是Linux系统），使得执行ss.bat或ss.sh时会开启多个shadowsocks客户端（ss.bat和ss.sh中是使用nodejs版shadowsocks的例子，可以照着改或使用其他版的shadowsocks）。
+5. TODO:
