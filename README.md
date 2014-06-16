@@ -20,4 +20,13 @@ Google IP的国内反向代理
 2. 对性能有点担心，有对Python性能优化有经验的，欢迎fork，欢迎push。
 3. 欢迎传播此项目。
 4. 部署时也可以修改config.json，指向`accounts.google.com`或`mail.google.com`的443端口，提供访问Gmail的国内IP。
-5. 项目依赖 https://github.com/Anorov/PySocks ，需要先安装PySocks才能运行。
+
+---
+
+如何在国内VPS上部署本项目？
+----
+
+1. 运行本项目需要python环境，如果是Windows系统请确保安装了python并且保证python在PATH环境变量中。
+2. 项目依赖 https://github.com/Anorov/PySocks ，需要先安装PySocks才能运行（其实不安装也行，直接把socks.py放到和gipt.py同一个目录下即可）。
+3. 首先需要准备一至多个shadowsocks帐号，将shadowsocks帐号的配置文件分别保存成ss1config.json、ss2config.json……，和gipt.py放在同一个目录下。
+4. TODO:
