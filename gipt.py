@@ -41,7 +41,8 @@ class CheckProxies(Thread):
                 try:
                     s.connect(('www.google.com', 80))
                     s.send(bytearray(b'GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n'))
-                    if s.recv(65536) == '':
+                    data = s.recv(65536)
+                    if data == b'' or data == '' or data == None:
                         raise Exception()
                     socksProxy.fail = False
                 except Exception:
