@@ -6,7 +6,7 @@ Google IP的国内反向代理
 
 问与答
 
-1. 问：如何使用？<br />答：只要简单地在hosts中添加一行代码`121.199.29.119 www.google.com`（如果原来添加过`www.google.com`的IP则需要先删除后再添加），保存后直接访问 https://www.google.com/ 即可。此项目暂时部署在我的阿里云服务器上。
+1. 问：如何使用？<br />答：只要简单地在hosts中添加一行代码`121.199.29.119 www.google.com`（如果原来添加过`www.google.com`的IP则需要先删除后再添加），保存后直接访问 https://www.google.com/ 即可（不提供http链接，所以不能使用 http://www.google.com/ 访问）。此项目暂时部署在我的阿里云服务器上。
 2. **问：有时候访问不了或跳到`www.google.de`之类的网站怎么办？<br />答：先访问 https://www.google.com/ncr （跳出未备案是正常的，因为变成http链接访问阿里云了），之后再次访问 https://www.google.com/ 即可**（其实原因是访问 https://www.google.com/ 时Google会根据shadowsocks代理所在的国家跳到相应国别的域名，比如`www.google.de`。而`www.google.de`由于GFW的作用访问不了，看上去就像是服务挂了。而先访问 https://www.google.com/ncr 后再次访问 https://www.google.com/ 则会防止Google进行跳转，从而解决这个问题）。
 3. 问：很多hosts工具使用后访问Google会403，这个工具能解决吗？<br />答：使用本host，每次会从全球Google IP中随机挑一个，Google不会检测到单个IP连续访问，所以应该不会再出现403。
 4. 问：为何只提供https访问访问？你能看到我搜索的内容吗？<br />答：由于SSL的特性，使用https时不管是我还是阿里云还是GFW都无法看到你的搜索内容，也是不提供http访问的原因。
