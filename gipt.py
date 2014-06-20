@@ -19,8 +19,8 @@ class ProxySocket(object):
         self.failCount = 0
         self.fail = False
 
-    def __cmp__(self, another):
-        return self.failCount - another.failCount
+    def __lt__(self, another):
+        return self.failCount < another.failCount
 
     def apply(self, socksocket):
         socksocket.set_proxy(socks.SOCKS5, self.host, self.port)
@@ -118,6 +118,7 @@ class Server(Thread):
         #tunnels = []
         while True:
             clientSock, clientAddr = self.sock.accept()
+            clientSock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             tunnel = Tunnel(self.config, clientSock, self.hosts, self.proxySelector)
             tunnel.start()
             #tunnels.append(pipe)
