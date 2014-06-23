@@ -4,6 +4,7 @@ from threading import Thread
 import time
 import random
 import sys
+import logging
 import socks
 
 class ProxySocket(object):
@@ -37,7 +38,7 @@ class CheckProxies(Thread):
             for socksProxy in self.config['socksProxies']:
                 s = socks.socksocket()
                 socksProxy.apply(s)
-                s.settimeout(self.config['socketTimeout'])
+                s.settimeout(self.config['checkTimeout'])
                 try:
                     s.connect(('www.google.com', 80))
                     s.send(bytearray(b'GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n'))
@@ -48,6 +49,8 @@ class CheckProxies(Thread):
                 except Exception:
                     socksProxy.failCount += 1
                     socksProxy.fail = True
+                finally:
+                    s.close()
             time.sleep(self.config['checkInterval'])
 
 class ProxySelector(object):
@@ -76,6 +79,8 @@ class Pipe(Thread):
                 if data == b'' or data == '' or data == None:
                     break
                 self.sockOut.send(data)
+        except Exception:
+            logging.info('%s: Pipe end', self.name)
         finally:
             self.sockIn.close()
             self.sockOut.close()
@@ -93,15 +98,22 @@ class Tunnel(Pipe):
         self.proxySelector = proxySelector
 
     def run(self):
-        proxySock = socks.socksocket()
-        self.proxySelector().apply(proxySock)
-        host = self.hosts[random.randint(0, len(self.hosts) - 1)]
-        proxySock.connect((host[0], host[1]))
-        pipe = Pipe()
-        pipe.setSockPair(proxySock, self.sock)
-        pipe.start()
-        self.setSockPair(self.sock, proxySock)
-        self.pipeData()
+        try:
+            proxySock = socks.socksocket()
+            self.sock.settimeout(self.config['socketTimeout'])
+            self.proxySelector().apply(proxySock)
+            host = self.hosts[random.randint(0, len(self.hosts) - 1)]
+            proxySock.connect((host[0], host[1]))
+            pipe = Pipe()
+            pipe.setSockPair(proxySock, self.sock)
+            pipe.start()
+            self.setSockPair(self.sock, proxySock)
+            self.pipeData()
+        except Exception:
+            logging.exception('%s: Exception in Tunnel:', self.name)
+        finally:
+            self.sock.close()
+            proxySock.close()
 
 class Server(Thread):
 
@@ -111,21 +123,29 @@ class Server(Thread):
         self.hosts = hosts
         self.proxySelector = proxySelector
         self.sock = socket.socket()
-        self.sock.bind(('0.0.0.0', port))
-        self.sock.listen(50)
+        try:
+            self.sock.bind(('0.0.0.0', port))
+            self.sock.listen(50)
+        except Exception:
+            logging.exception('Exception in Server init:')
+            raise
 
     def run(self):
         #tunnels = []
         while True:
-            clientSock, clientAddr = self.sock.accept()
-            clientSock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            tunnel = Tunnel(self.config, clientSock, self.hosts, self.proxySelector)
-            tunnel.start()
-            #tunnels.append(pipe)
+            try:
+                clientSock, clientAddr = self.sock.accept()
+                clientSock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                tunnel = Tunnel(self.config, clientSock, self.hosts, self.proxySelector)
+                tunnel.start()
+                #tunnels.append(pipe)
+            except Exception:
+                logging.exception('Exception in Server run:')
 
 class Main(object):
 
     def __init__(self, config):
+        logging.basicConfig(filename = config['logFilename'], level = getattr(logging, config['logLevel']))
         config['socksProxies'] = [ProxySocket(config, socksProxy) for socksProxy in config['socksProxies']]
         self.config = config
 
