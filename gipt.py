@@ -1,11 +1,15 @@
 import json
-import socket
-from threading import Thread
+import logging
+try:
+    from gevent import socket
+    from gevent import Greenlet as Concurrent
+except ImportError:
+    import socket
+    from threading import Thread as Concurrent
+    print('Cannot find gevent, using threading')
 import time
 import random
 import sys
-import logging
-import socks
 
 class ProxySocket(object):
 
@@ -23,24 +27,57 @@ class ProxySocket(object):
     def __lt__(self, another):
         return self.failCount < another.failCount
 
-    def apply(self, socksocket):
-        socksocket.set_proxy(socks.SOCKS5, self.host, self.port)
+    def connect(self, socksocket, address):
+        socksocket.connect((self.host, self.port))
+        socksocket.send(b'\x05\x01\x00')
+        if socksocket.recv(1) != b'\x05':
+            raise Exception('Not a socks5 proxy')
+        if socksocket.recv(1) != b'\x00':
+            raise Exception('Socks5 proxy has no non-authentication method')
+        addrStr = chr(len(address[0])) + str(address[0]) + chr(int(address[1] / 0x100)) + chr(int(address[1] % 0x100))
+        try:
+            socksocket.send(b'\x05\x01\x00\x03' + addrStr.encode('iso-8859-1'))
+        except UnicodeDecodeError:
+            socksocket.send(b'\x05\x01\x00\x03' + addrStr)
+        if socksocket.recv(1) != b'\x05':
+            raise Exception('Not a socks5 proxy')
+        if socksocket.recv(1) != b'\x00':
+            raise Exception('Proxy cannot connect to remote host')
+        socksocket.recv(1)
+        atyp = socksocket.recv(1)
 
-class CheckProxies(Thread):
+        def recvFully(socksocket, count):
+            while count > 0:
+                l = len(socksocket.recv(count))
+                if l == 0:
+                    raise Exception('EOF Exception')
+                count -= l
+
+        if atyp == b'\x01':
+            recvFully(socksocket, 4)
+        elif atyp == b'\x03':
+            addrLen = ord(socksocket.recv(1))
+            recvFully(socksocket, addrLen)
+        elif atyp == b'\x04':
+            recvFully(socksocket, 16)
+        else:
+            raise Exception('Not recognize socks5 atyp')
+        recvFully(socksocket, 2)
+
+class CheckProxies(Concurrent):
 
     def __init__(self, config):
-        Thread.__init__(self)
+        Concurrent.__init__(self)
         self.daemon = True
         self.config = config
 
     def run(self):
         while True:
             for socksProxy in self.config['socksProxies']:
-                s = socks.socksocket()
-                socksProxy.apply(s)
+                s = socket.socket()
                 s.settimeout(self.config['checkTimeout'])
                 try:
-                    s.connect(('www.google.com', 80))
+                    socksProxy.connect(s, ('www.google.com', 80))
                     s.send(bytearray(b'GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n'))
                     data = s.recv(65536)
                     if data == b'' or data == '' or data == None:
@@ -53,6 +90,9 @@ class CheckProxies(Thread):
                     s.close()
             time.sleep(self.config['checkInterval'])
 
+    def _run(self):
+        self.run()
+
 class ProxySelector(object):
 
     def __init__(self, config):
@@ -63,10 +103,10 @@ class ProxySelector(object):
         goodProxies.sort()
         return goodProxies[int(random.randint(0, len(goodProxies)) * random.randint(0, len(goodProxies)) / len(goodProxies)) - 1]
 
-class Pipe(Thread):
+class Pipe(Concurrent):
 
     def __init__(self):
-        Thread.__init__(self)
+        Concurrent.__init__(self)
 
     def setSockPair(self, sockIn, sockOut):
         self.sockIn = sockIn
@@ -80,13 +120,16 @@ class Pipe(Thread):
                     break
                 self.sockOut.send(data)
         except Exception:
-            logging.info('%s: Pipe end', self.name)
+            logging.info('Pipe end')
         finally:
             self.sockIn.close()
             self.sockOut.close()
 
     def run(self):
         self.pipeData()
+
+    def _run(self):
+        self.run()
 
 class Tunnel(Pipe):
 
@@ -99,26 +142,25 @@ class Tunnel(Pipe):
 
     def run(self):
         try:
-            proxySock = socks.socksocket()
+            proxySock = socket.socket()
             self.sock.settimeout(self.config['socketTimeout'])
-            self.proxySelector().apply(proxySock)
             host = self.hosts[random.randint(0, len(self.hosts) - 1)]
-            proxySock.connect((host[0], host[1]))
+            self.proxySelector().connect(proxySock, (host[0], host[1]))
             pipe = Pipe()
             pipe.setSockPair(proxySock, self.sock)
             pipe.start()
             self.setSockPair(self.sock, proxySock)
             self.pipeData()
         except Exception:
-            logging.exception('%s: Exception in Tunnel:', self.name)
+            logging.exception('Exception in Tunnel:')
         finally:
             self.sock.close()
             proxySock.close()
 
-class Server(Thread):
+class Server(Concurrent):
 
     def __init__(self, config, port, hosts, proxySelector):
-        Thread.__init__(self)
+        Concurrent.__init__(self)
         self.config = config
         self.hosts = hosts
         self.proxySelector = proxySelector
@@ -142,6 +184,9 @@ class Server(Thread):
             except Exception:
                 logging.exception('Exception in Server run:')
 
+    def _run(self):
+        self.run()
+
 class Main(object):
 
     def __init__(self, config):
@@ -151,12 +196,14 @@ class Main(object):
 
     def start(self):
         CheckProxies(self.config).start()
-        #servers = []
+        servers = []
         proxySelector = ProxySelector(self.config)
         for k, v in self.config['tunnelServers'].items():
             server = Server(self.config, int(k), v, proxySelector)
             server.start()
-            #servers.append(tunnel)
+            servers.append(server)
+        for server in servers:
+            server.join()
 
 if __name__ == '__main__':
     Main(json.loads(open(sys.argv[1], 'r').read())).start()
