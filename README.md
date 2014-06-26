@@ -23,17 +23,18 @@ Google IP的国内反向代理
 3. 欢迎传播此项目。
 4. 部署时也可以修改config.json，指向`accounts.google.com`或`mail.google.com`的443端口，提供访问Gmail的国内IP。
 
----
+--
 
 如何在国内VPS上部署本项目？
 ----
 
 1. 运行本项目需要python环境，如果是Windows系统请确保安装了python并且保证python在PATH环境变量中。
-2. 项目依赖 https://github.com/Anorov/PySocks ，需要先安装PySocks才能运行（其实不安装也行，直接把PySocks的socks.py放到和gipt.py同一个目录下即可）。
+2. 移除了对PySocks的依赖<del>项目依赖 https://github.com/Anorov/PySocks ，需要先安装PySocks才能运行（其实不安装也行，直接把PySocks的socks.py放到和gipt.py同一个目录下即可）。</del>
 3. 首先需要准备一至多个shadowsocks帐号，将shadowsocks帐号的配置文件分别保存成ss1config.json、ss2config.json……，和gipt.py放在同一个目录下。程序每隔一段时间会检测所有shadowsocks服务的状态，之后会从正常工作的shadowsocks服务中选一个连接Google服务。注意：由于这些shadowsocks客户端会同时启动，所以这些配置文件中的`local_port`不能相同。
 4. 将shadowsocks的命令行客户端放在thirdparty目录中，修改ss.bat（如果你是Windows系统）或ss.sh（如果你是Linux系统），使得执行ss.bat或ss.sh时会开启多个shadowsocks客户端（ss.bat和ss.sh中是使用nodejs版shadowsocks的例子，可以照着改或使用其他版的shadowsocks）。
 5. 如果你是Linux系统，执行`chmod +x gipt.sh ss.sh`给这2个文件加上执行权限。
 6. 修改config.json，在`socksProxies`这项中填写所有shadowsocks客户端侦听的端口（就是ss1config.json、ss2config.json中的`local_port`）。比如ss1config.json中的`local_port`是8081，ss2config.json中的`local_port`是8082，那么config.json中的`socksProxies`配置需要改为：`"socksProxies" : [8081, 8082],`。
-7. （可选步骤）修改config.json，将`tunnelServers`改为`"tunnelServers" : {"443" : [["accounts.google.com", 443]]}`即可转为提供Google登录服务，改为`"tunnelServers" : {"443" : [["mail.google.com", 443]]}`即可转为提供Gmail服务。保留原配置即提供Google搜索服务，而且每次会从Google全球域名中随机挑一个进行连接。
-8. 运行gipt.bat或gipt.sh开启服务，443端口即为服务端口。
-9. 如果部署遇到问题，欢迎提Issue。
+7. （可选步骤）安装gevent，gipt的性能将会提升不少。
+8. （可选步骤）修改config.json，将`tunnelServers`改为`"tunnelServers" : {"443" : [["accounts.google.com", 443]]}`即可转为提供Google登录服务，改为`"tunnelServers" : {"443" : [["mail.google.com", 443]]}`即可转为提供Gmail服务。保留原配置即提供Google搜索服务，而且每次会从Google全球域名中随机挑一个进行连接。
+9. 运行gipt.bat或gipt.sh开启服务，443端口即为服务端口。
+10. 如果部署遇到问题，欢迎提Issue并附上log（gipt.log）。
