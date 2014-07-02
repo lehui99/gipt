@@ -63,6 +63,7 @@ class ProxySocket(object):
         else:
             raise Exception('Not recognize socks5 atyp')
         recvFully(socksocket, 2)
+        logging.debug('Connectted through %s to %s.', str((self.host, self.port)), str(address))
 
 class CheckProxies(Concurrent):
 
@@ -83,9 +84,11 @@ class CheckProxies(Concurrent):
                     if data == b'' or data == '' or data == None:
                         raise Exception()
                     socksProxy.fail = False
+                    logging.debug('Proxy %s is alive.', (socksProxy.host, socksProxy.port))
                 except Exception:
                     socksProxy.failCount += 1
                     socksProxy.fail = True
+                    logging.debug('Proxy %s is dead.', (socksProxy.host, socksProxy.port))
                 finally:
                     s.close()
             time.sleep(self.config['checkInterval'])
@@ -180,6 +183,7 @@ class Server(Concurrent):
                 clientSock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
                 tunnel = Tunnel(self.config, clientSock, self.hosts, self.proxySelector)
                 tunnel.start()
+                logging.debug('Accepted connection from %s.', str(clientAddr))
                 #tunnels.append(pipe)
             except Exception:
                 logging.exception('Exception in Server run:')
