@@ -3,11 +3,12 @@ import logging
 try:
     from gevent import socket
     from gevent import Greenlet as Concurrent
+    import gevent as time
 except ImportError:
     import socket
     from threading import Thread as Concurrent
+    import time
     print('Cannot find gevent, using threading')
-import time
 import random
 import sys
 
