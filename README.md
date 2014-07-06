@@ -10,7 +10,7 @@ Google IP的国内反向代理
 2. **问：有时候访问不了或跳到`www.google.de`之类的网站怎么办？<br />答：添加`www.google.com.hk`的hosts后访问 https://www.google.com.hk/ 可以避免这个问题。或者添加`www.google.com`的hosts后先访问 https://www.google.com/ncr （跳出未备案是正常的，因为变成http链接访问阿里云了），之后再次访问 https://www.google.com/ 即可**（其实原因是访问 https://www.google.com/ 时Google会根据shadowsocks代理所在的国家跳到相应国别的域名，比如`www.google.de`。而`www.google.de`由于GFW的作用访问不了，看上去就像是服务挂了。而先访问 https://www.google.com/ncr 后再次访问 https://www.google.com/ 则会防止Google进行跳转，从而解决这个问题）。
 3. 问：很多hosts工具使用后访问Google会403，这个工具能解决吗？<br />答：使用本host，每次会从全球Google IP中随机挑一个，Google不会检测到单个IP连续访问，所以应该不会再出现403。
 4. 问：你把这个gipt服务放在了哪个国内服务器上？<br />答：此项目暂时部署在我的阿里云服务器上。
-5. 问：为何只提供https访问访问？你能看到我搜索的内容吗？<br />答：由于SSL的特性，使用https时不管是我还是阿里云还是GFW都无法看到你的搜索内容，也是不提供http访问的原因。
+5. 问：为何只提供https访问访问？你能看到我搜索的内容吗？<br />答：由于SSL的特性加上访问时仍旧保留Google的SSL证书，使用https时不管是我还是阿里云还是GFW都无法看到你的搜索内容，这也是不提供http访问的原因。
 6. 问：GFW检测到Google的HTTPS链接后过一段时间就会进行封锁，因为HTTPS中的SSL证书是明文传输的。<br />答：这个工具是部署在国内服务器上的，国内用户访问国内服务器的流量不经过GFW，经过GFW的是shadowsocks的流量。
 7. 问：为何放在阿里云上？不怕被喝茶吗？<br />答：我们的祖国并不承认封锁了Google，说是Google自己的问题。所以我只是帮Google一下，让大家有个顺畅访问Google的方法，有什么不对呢？
 8. 问：原理是什么？<br />答：我在阿里云上开了shadowsocks客户端，通过国外shadowsocks服务器做简单的端口转发连接Google服务。特此感谢 https://www.shadowsocks.net/ 提供的免费帐号。
