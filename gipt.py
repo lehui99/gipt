@@ -1,5 +1,6 @@
 import json
 import logging
+import logging.handlers
 try:
     from gevent import socket
     from gevent import Greenlet as Concurrent
@@ -64,7 +65,7 @@ class ProxySocket(object):
         else:
             raise Exception('Not recognize socks5 atyp')
         recvFully(socksocket, 2)
-        logging.debug('Connectted through %s to %s.', str((self.host, self.port)), str(address))
+        self.config['logger'].debug('Connectted through %s to %s.', str((self.host, self.port)), str(address))
 
 class CheckProxies(Concurrent):
 
@@ -85,11 +86,11 @@ class CheckProxies(Concurrent):
                     if data == b'' or data == '' or data == None:
                         raise Exception()
                     socksProxy.fail = False
-                    logging.debug('Proxy %s is alive.', (socksProxy.host, socksProxy.port))
+                    self.config['logger'].debug('Proxy %s is alive.', (socksProxy.host, socksProxy.port))
                 except Exception:
                     socksProxy.failCount += 1
                     socksProxy.fail = True
-                    logging.debug('Proxy %s is dead.', (socksProxy.host, socksProxy.port))
+                    self.config['logger'].debug('Proxy %s is dead.', (socksProxy.host, socksProxy.port))
                 finally:
                     s.close()
             time.sleep(self.config['checkInterval'])
@@ -109,8 +110,9 @@ class ProxySelector(object):
 
 class Pipe(Concurrent):
 
-    def __init__(self):
+    def __init__(self, config):
         Concurrent.__init__(self)
+        self.config = config
 
     def setSockPair(self, sockIn, sockOut):
         self.sockIn = sockIn
@@ -124,7 +126,7 @@ class Pipe(Concurrent):
                     break
                 self.sockOut.send(data)
         except Exception:
-            logging.info('Pipe end')
+            self.config['logger'].info('Pipe end')
         finally:
             self.sockIn.close()
             self.sockOut.close()
@@ -138,7 +140,7 @@ class Pipe(Concurrent):
 class Tunnel(Pipe):
 
     def __init__(self, config, sock, hosts, proxySelector):
-        Pipe.__init__(self)
+        Pipe.__init__(self, config)
         self.config = config
         self.sock = sock
         self.hosts = hosts
@@ -150,13 +152,13 @@ class Tunnel(Pipe):
             self.sock.settimeout(self.config['socketTimeout'])
             host = self.hosts[random.randint(0, len(self.hosts) - 1)]
             self.proxySelector().connect(proxySock, (host[0], host[1]))
-            pipe = Pipe()
+            pipe = Pipe(self.config)
             pipe.setSockPair(proxySock, self.sock)
             pipe.start()
             self.setSockPair(self.sock, proxySock)
             self.pipeData()
         except Exception:
-            logging.exception('Exception in Tunnel:')
+            self.config['logger'].exception('Exception in Tunnel:')
         finally:
             self.sock.close()
             proxySock.close()
@@ -173,7 +175,7 @@ class Server(Concurrent):
             self.sock.bind(('0.0.0.0', port))
             self.sock.listen(50)
         except Exception:
-            logging.exception('Exception in Server init:')
+            self.config['logger'].exception('Exception in Server init:')
             raise
 
     def run(self):
@@ -184,10 +186,10 @@ class Server(Concurrent):
                 clientSock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
                 tunnel = Tunnel(self.config, clientSock, self.hosts, self.proxySelector)
                 tunnel.start()
-                logging.debug('Accepted connection from %s.', str(clientAddr))
-                #tunnels.append(pipe)
+                self.config['logger'].debug('Accepted connection from %s.', str(clientAddr))
+                #tunnels.append(tunnel)
             except Exception:
-                logging.exception('Exception in Server run:')
+                self.config['logger'].exception('Exception in Server run:')
 
     def _run(self):
         self.run()
@@ -195,20 +197,32 @@ class Server(Concurrent):
 class Main(object):
 
     def __init__(self, config):
-        logging.basicConfig(filename = config['logFilename'], level = getattr(logging, config['logLevel']))
+        logHandler = logging.handlers.RotatingFileHandler(filename = config['logFilename'], maxBytes = config['logMaxSize'], backupCount = config['logBackupCount'])
+        logHandler.setFormatter(logging.Formatter(config['logFormat']))
+        config['logger'] = logging.getLogger('gipt')
+        config['logger'].setLevel(getattr(logging, config['logLevel']))
+        config['logger'].addHandler(logHandler)
         config['socksProxies'] = [ProxySocket(config, socksProxy) for socksProxy in config['socksProxies']]
         self.config = config
 
     def start(self):
-        CheckProxies(self.config).start()
-        servers = []
-        proxySelector = ProxySelector(self.config)
-        for k, v in self.config['tunnelServers'].items():
-            server = Server(self.config, int(k), v, proxySelector)
-            server.start()
-            servers.append(server)
-        for server in servers:
-            server.join()
+        try:
+            CheckProxies(self.config).start()
+            servers = []
+            proxySelector = ProxySelector(self.config)
+            for k, v in self.config['tunnelServers'].items():
+                server = Server(self.config, int(k), v, proxySelector)
+                server.start()
+                servers.append(server)
+            for server in servers:
+                server.join()
+        except Exception:
+            self.config['logger'].exception('Exception in Main:')
+            raise
 
 if __name__ == '__main__':
-    Main(json.loads(open(sys.argv[1], 'r').read())).start()
+    if len(sys.argv) > 1:
+        configFile = sys.argv[1]
+    else:
+        configFile = 'config.json'
+    Main(json.loads(open(configFile, 'r').read())).start()
